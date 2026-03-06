@@ -5,8 +5,14 @@ from PIL import Image
 
 app = Flask(__name__)
 
-# Load trained model
-model = tf.keras.models.load_model("plant_disease_efficientnet.keras")
+model = None
+
+
+def get_model():
+    global model
+    if model is None:
+        model = tf.keras.models.load_model("plant_disease_efficientnet.keras")
+    return model
 
 # Disease classes
 class_names = [
@@ -59,6 +65,11 @@ disease_info = {
 }
 
 }
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return {"status": "ok"}, 200
 
 @app.route('/', methods=['GET', 'POST'])
 def predict():
@@ -116,7 +127,7 @@ def predict():
         img = np.array(img) / 255.0
         img = np.expand_dims(img, axis=0)
 
-        prediction = model.predict(img)
+        prediction = get_model().predict(img)
 
         # --- Crop based class filtering ---
         if crop == "Pepper":
