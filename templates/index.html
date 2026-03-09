@@ -5,18 +5,364 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Farming Assistant</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+
+:root{
+    --green:#1f5f3f;
+    --green-soft:#eaf7ef;
+    --border:#d1d5db;
+    --text:#111827;
+    --text-light:#374151;
+}
+
+/* Page */
+
+body{
+    margin:0;
+    font-family: system-ui,-apple-system,sans-serif;
+    background:#f1f5f3;
+    color:var(--text);
+    font-size:16px;
+}
+
+/* Header */
+
+.top-nav{
+    background:var(--green);
+    color:white;
+    padding:16px 40px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo{
+    font-weight:700;
+    font-size:18px;
+}
+
+/* Hero */
+
+.hero{
+    text-align:center;
+    margin:40px auto 30px auto;
+    max-width:800px;
+}
+
+.hero h1{
+    font-size:38px;
+    margin-bottom:10px;
+    color:#0f172a;
+    font-weight:700;
+}
+
+.hero p{
+    color:var(--text-light);
+    font-size:16px;
+}
+
+/* Container */
+
+.container{
+    max-width:1100px;
+    margin:auto;
+}
+
+/* Card */
+
+.main-card{
+    background:white;
+    border-radius:16px;
+    padding:28px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+
+/* Section title */
+
+.section-title{
+    font-size:18px;
+    font-weight:600;
+    margin-bottom:18px;
+}
+
+/* Layout */
+
+.form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+}
+
+/* Upload */
+
+.file-upload-box{
+    border:2px dashed #4fa86a;
+    border-radius:12px;
+    padding:30px;
+    background:var(--green-soft);
+    text-align:center;
+    cursor:pointer;
+}
+
+.file-upload-box:hover{
+    background:#def0e6;
+}
+
+.preview-image{
+    width:100%;
+    border-radius:10px;
+}
+
+/* Inputs */
+
+.form-group{
+    display:flex;
+    flex-direction:column;
+    margin-bottom:14px;
+}
+
+select,input[type="text"]{
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    font-size:14px;
+    background:#ffffff;
+    color:#111827;
+    font-weight:500;
+}
+
+/* Force readable dropdown appearance on Safari */
+select{
+    appearance:none;
+    -webkit-appearance:none;
+    background-color:#ffffff;
+}
+
+/* Improve label contrast even more */
+/* Strong readable form labels */
+.form-group label{
+    font-weight:800 !important;
+    color:#000000 !important;
+    font-size:15px !important;
+    letter-spacing:0.6px;
+    text-transform:uppercase;
+    opacity:1 !important;
+}
+
+.form-group{
+    opacity:1 !important;
+}
+
+/* Slider */
+
+.slider-container{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.slider-value{
+    background:#e6f4ea;
+    color:var(--green);
+    padding:6px 10px;
+    border-radius:6px;
+    font-weight:600;
+}
+
+/* Button */
+
+.analyze-btn{
+    margin-top:16px;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:8px;
+    background:var(--green);
+    color:white;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.analyze-btn:hover{
+    background:#245c40;
+}
+
+/* Results */
+
+.results-card{
+    margin-top:30px;
+    background:white;
+    padding:28px;
+    border-radius:16px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+
+.info-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:16px;
+}
+
+.info-card{
+    background:#fafafa;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+}
+
+
+.alt-item{
+    display:flex;
+    justify-content:space-between;
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    margin-top:8px;
+    background:white;
+}
+
+/* ---------- RESULT UI IMPROVEMENTS ---------- */
+
+.results-section{
+    margin-top:30px;
+}
+
+.prediction-header{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.prediction-title{
+    font-size:24px;
+    font-weight:700;
+    color:#0f172a;
+}
+
+.health-status{
+    display:inline-block;
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:13px;
+    margin-top:8px;
+}
+
+.health-status.healthy{
+    background:#dcfce7;
+    color:#166534;
+}
+
+.health-status.high-risk{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.health-status.moderate-risk{
+    background:#fef3c7;
+    color:#92400e;
+}
+
+/* Confidence Bar */
+
+.confidence-wrapper{
+    margin-top:12px;
+}
+
+.confidence-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:14px;
+    margin-bottom:6px;
+}
+
+.confidence-bar-bg{
+    width:100%;
+    height:8px;
+    background:#e5e7eb;
+    border-radius:6px;
+}
+
+.confidence-bar-fill{
+    height:8px;
+    background:linear-gradient(90deg,#22c55e,#16a34a);
+    border-radius:6px;
+}
+
+/* Result cards */
+
+.info-card{
+    background:white;
+    border-radius:12px;
+    padding:18px;
+    border:1px solid #e5e7eb;
+    box-shadow:0 6px 16px rgba(0,0,0,0.05);
+}
+
+.info-card-title{
+    font-weight:700;
+    font-size:16px;
+    margin-bottom:10px;
+    color:#0f172a;
+}
+
+.info-card-content{
+    font-size:15px;
+    line-height:1.7;
+    color:#1f2937;
+}
+
+/* Alternative predictions */
+
+.alt-predictions{
+    margin-top:25px;
+}
+
+.alt-predictions-title{
+    font-weight:700;
+    margin-bottom:10px;
+}
+
+.alt-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.alt-name{
+    font-weight:600;
+}
+
+.alt-prob{
+    font-weight:700;
+    color:#16a34a;
+}
+
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-    <div class="header">
-        <h1>🌿 Smart Farming Assistant</h1>
-        <p>AI-powered plant disease detection & crop analysis</p>
+    <div class="top-nav">
+        <div class="logo">🌿 SmartFarm AI</div>
+        <div class="nav-links">
+            <!-- <span>Disease Detection</span>
+            <span>Crop Advisor</span>
+            <span>AI Assistant</span> -->
+        </div>
+    </div>
+
+    <div class="hero">
+        <h1>Smart Farming Assistant</h1>
+        <p>AI-powered plant disease detection & crop intelligence</p>
     </div>
 
     <div class="main-card">
+        <div class="section-title">📷 Upload & Settings</div>
         <form method="POST" enctype="multipart/form-data">
 
             <div class="form-grid">
@@ -29,10 +375,10 @@
                             <div class="file-upload-icon">📷</div>
                             <div class="file-upload-text">Click to upload or drag & drop</div>
                             <div class="file-upload-hint">Supports JPG, PNG, WEBP</div>
+                            <div class="preview-container" id="previewContainer">
+                                <img id="preview" class="preview-image">
+                            </div>
                         </div>
-                    </div>
-                    <div class="preview-container" id="previewContainer">
-                        <img id="preview" class="preview-image">
                     </div>
                 </div>
 
@@ -84,6 +430,11 @@
                 </div>
             </div>
 
+            <div class="form-group full-width">
+                <label>Ask AI about your crop (optional)</label>
+                <input type="text" name="question" value="{{ request.form.get('question','') }}" placeholder="Example: Why did this disease occur?" style="width:100%;padding:10px;border-radius:6px;border:1px solid #ccc;">
+            </div>
+
             <button type="submit" class="analyze-btn">
                 🔍 Analyze My Crop
             </button>
@@ -93,18 +444,27 @@
 
     {% if result %}
     <div class="results-section">
-        <div class="results-card">
+        <div class="results-card" style="margin-top:10px;">
 
             <div class="prediction-header">
                 <div class="prediction-title">{{ result }}</div>
                 {% if confidence %}
+                <div class="health-indicator">
+                    {% if 'healthy' in result.lower() %}
+                        <span class="health-status healthy">🟢 Healthy Plant</span>
+                    {% elif confidence > 85 %}
+                        <span class="health-status high-risk">🔴 High Disease Risk</span>
+                    {% else %}
+                        <span class="health-status moderate-risk">🟡 Moderate Disease Risk</span>
+                    {% endif %}
+                </div>
                 <div class="confidence-wrapper">
                     <div class="confidence-label">
                         <span>Confidence</span>
                         <span>{{ confidence }}%</span>
                     </div>
                     <div class="confidence-bar-bg">
-                        <div class="confidence-bar-fill" style="width: {{ confidence }}%"></div>
+                        <div class="confidence-bar-fill" style="width: {{ confidence }}%;"></div>
                     </div>
                 </div>
                 {% endif %}
@@ -117,6 +477,11 @@
                     <div class="info-card-content">{{ description }}</div>
                 </div>
                 {% endif %}
+
+                <div class="info-card">
+                    <div class="info-card-title">🤖 AI Farming Advice</div>
+                    <div class="info-card-content" id="ai-advice">Generating AI advice...</div>
+                </div>
 
                 {% if treatment %}
                 <div class="info-card">
@@ -161,11 +526,19 @@
             </div>
             {% endif %}
 
+            {% if chat_response %}
+            <div class="info-card" style="margin-top:20px;">
+                <div class="info-card-title">💬 AI Assistant Response</div>
+                <div class="info-card-content">{{ chat_response }}</div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
     {% endif %}
 
 </div>
+
 
 <script>
 // File upload preview
@@ -208,6 +581,52 @@ dropZone.addEventListener('drop', (e) => {
         document.getElementById("uploadBox").style.display = "none";
     }
 });
+
+// Load AI advice asynchronously so the UI doesn't block
+async function loadAIAdvice(){
+
+    const result = "{{ result if result else '' }}";
+    if(!result) return;
+
+    const crop = document.querySelector("select[name='crop']").value;
+    const soil = document.querySelector("select[name='soil']").value;
+    const moisture = document.getElementById("moistureSlider").value;
+    const weather = document.querySelector("select[name='weather']").value;
+    const questionInput = document.querySelector("input[name='question']");
+    const question = questionInput ? questionInput.value : "";
+
+    try{
+        const response = await fetch("/ai_advice",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                crop:crop,
+                disease:result,
+                soil:soil,
+                moisture:moisture,
+                weather:weather,
+                question:question
+            })
+        });
+
+        const data = await response.json();
+        const adviceBox = document.getElementById("ai-advice");
+        if(adviceBox){
+            adviceBox.innerHTML = "<strong>Question:</strong> " + question +
+                                  "<br><br><strong>AI Answer:</strong><br>" +
+                                  data.advice.replace(/\\n/g,"<br>");
+        }
+    }
+    catch(e){
+        const adviceBox = document.getElementById("ai-advice");
+        if(adviceBox){
+            adviceBox.innerText = "AI advice service unavailable.";
+        }
+    }
+}
+
+// Call AI advice loader after page render
+loadAIAdvice();
 </script>
 
 </body>

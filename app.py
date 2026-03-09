@@ -1,7 +1,8 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+from ollama_client import ask_llm
 
 app = Flask(__name__)
 
@@ -67,9 +68,63 @@ disease_info = {
 }
 
 
+
 @app.route("/health", methods=["GET"])
 def health():
     return {"status": "ok"}, 200
+
+@app.route("/ai_advice", methods=["POST"])
+def ai_advice_endpoint():
+
+    data = request.json
+
+    crop = data.get("crop")
+    disease = data.get("disease")
+    soil = data.get("soil")
+    moisture = data.get("moisture")
+    weather = data.get("weather")
+    question = data.get("question")
+
+    # Build prompt depending on whether farmer asked a question
+    if question and question.strip() != "":
+        prompt = f"""
+You are an expert agricultural advisor helping farmers in India.
+Always answer in clear English.
+Use short bullet points where useful.
+
+Farmer Question:
+{question}
+
+Crop: {crop}
+Detected Disease: {disease}
+Soil Type: {soil}
+Soil Moisture: {moisture}%
+Weather: {weather}
+
+Answer the farmer's question clearly with practical advice for farmers.
+Keep the response concise and in bullet points where useful.
+"""
+    else:
+        prompt = f"""
+You are an expert agricultural advisor helping farmers in India.
+Always answer in clear English.
+Use short bullet points where useful.
+
+Crop: {crop}
+Detected Disease: {disease}
+Soil Type: {soil}
+Soil Moisture: {moisture}%
+Weather: {weather}
+
+Explain the disease, give treatment steps, and prevention tips.
+Use short bullet points and practical farmer-friendly language.
+"""
+
+    try:
+        response = ask_llm(prompt).strip()
+        return jsonify({"advice": response})
+    except Exception:
+        return jsonify({"advice": "AI advice service unavailable"})
 
 @app.route('/', methods=['GET', 'POST'])
 def predict():
@@ -82,6 +137,8 @@ def predict():
     irrigation_advice = None
     weather_analysis = None
     top2_predictions = None
+    ai_advice = None
+    chat_response = None
 
     if request.method == "POST":
 
@@ -90,6 +147,7 @@ def predict():
         soil = request.form.get("soil")
         moisture = request.form.get("moisture")
         weather = request.form.get("weather")
+        user_question = request.form.get("question")
 
         # --- Environment Analysis (rule-based) ---
 
@@ -127,7 +185,7 @@ def predict():
         img = np.array(img) / 255.0
         img = np.expand_dims(img, axis=0)
 
-        prediction = get_model().predict(img)
+        prediction = get_model().predict(img, verbose=0)
 
         # --- Crop based class filtering ---
         if crop == "Pepper":
@@ -168,12 +226,16 @@ def predict():
         else:
             result = class_names[best_idx]
 
-            if result in disease_info:
-                description = disease_info[result]["description"]
-                treatment = disease_info[result]["treatment"]
+            # Skip LLM if the plant is healthy
+            if "healthy" in result.lower():
+                description = "The plant appears healthy with no visible disease symptoms."
+                treatment = "Continue regular irrigation, monitor plant health, and maintain good soil nutrition."
+                ai_advice = None
             else:
-                description = "No detailed description available."
-                treatment = "Consult a local agricultural expert."
+                # Do not call LLM here (to avoid blocking the page)
+                description = "Disease detected. Detailed AI advice will load shortly."
+                treatment = None
+                ai_advice = None
 
         confidence = round(confidence * 100, 2)
 
@@ -186,7 +248,9 @@ def predict():
         soil_advice=soil_advice,
         irrigation_advice=irrigation_advice,
         weather_analysis=weather_analysis,
-        top2_predictions=top2_predictions
+        top2_predictions=top2_predictions,
+        ai_advice=ai_advice,
+        chat_response=chat_response
     )
 
 
