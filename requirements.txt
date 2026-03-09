@@ -3,3 +3,7 @@ tensorflow==2.13.0
 Pillow==10.1.0
 numpy==1.24.3
 gunicorn==21.2.0
+matplotlib
+opencv-python
+scikit-learn
+requests
