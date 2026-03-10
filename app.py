@@ -119,7 +119,21 @@ def predict():
 
     if request.method == "POST":
 
-        file = request.files['image']
+        file = request.files.get('image')
+        if file is None or file.filename == "":
+            return render_template(
+                "index.html",
+                result=None,
+                confidence=None,
+                description="No image uploaded. Please upload a leaf image.",
+                treatment=None,
+                soil_advice=None,
+                irrigation_advice=None,
+                weather_analysis=None,
+                top2_predictions=None,
+                ai_advice=None,
+                chat_response=None
+            )
         crop = request.form.get("crop")
         soil = request.form.get("soil")
         moisture = request.form.get("moisture")
@@ -158,7 +172,22 @@ def predict():
         else:
             weather_analysis = "Weather conditions appear stable for crop growth."
 
-        img = Image.open(file).convert("RGB").resize((224,224))
+        try:
+            img = Image.open(file).convert("RGB").resize((224,224))
+        except Exception:
+            return render_template(
+                "index.html",
+                result=None,
+                confidence=None,
+                description="Invalid image file. Please upload a valid leaf image.",
+                treatment=None,
+                soil_advice=None,
+                irrigation_advice=None,
+                weather_analysis=None,
+                top2_predictions=None,
+                ai_advice=None,
+                chat_response=None
+            )
         img = np.array(img) / 255.0
         img = np.expand_dims(img, axis=0)
 
