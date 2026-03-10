@@ -33,39 +33,6 @@ class_names = [
 "Tomato_mosaic_virus",
 "Tomato_healthy"
 ]
-disease_info = {
-
-"Tomato_Late_blight": {
-"description": "Late blight is a fungal disease that causes dark lesions on leaves and stems.",
-"treatment": "Remove infected leaves, avoid overhead watering, and apply copper-based fungicides."
-},
-
-"Tomato_Early_blight": {
-"description": "Early blight causes brown spots with concentric rings on tomato leaves.",
-"treatment": "Use disease-resistant varieties and apply fungicides when symptoms appear."
-},
-
-"Tomato_Leaf_Mold": {
-"description": "Leaf mold appears as yellow spots on the upper leaf surface and mold underneath.",
-"treatment": "Improve air circulation and apply appropriate fungicides."
-},
-
-"Tomato_healthy": {
-"description": "The plant appears healthy with no visible disease symptoms.",
-"treatment": "Continue regular irrigation and monitoring."
-},
-
-"Potato_Early_blight": {
-"description": "Early blight causes brown lesions with target-like rings on potato leaves.",
-"treatment": "Use crop rotation and fungicide sprays."
-},
-
-"Potato_Late_blight": {
-"description": "Late blight causes water-soaked lesions that quickly turn brown.",
-"treatment": "Remove infected plants and apply protective fungicides."
-}
-
-}
 
 
 
@@ -89,26 +56,21 @@ def ai_advice_endpoint():
     if question and question.strip() != "":
         prompt = f"""
 You are an expert agricultural advisor helping farmers in India.
-Always answer in clear English.
-Use short bullet points where useful.
+
+The farmer asked a specific question about their crop.
 
 Farmer Question:
 {question}
 
 Crop: {crop}
-Detected Disease: {disease}
-Soil Type: {soil}
-Soil Moisture: {moisture}%
-Weather: {weather}
 
-Answer the farmer's question clearly with practical advice for farmers.
-Keep the response concise and in bullet points where useful.
+Answer ONLY the farmer's question clearly and directly.
+Do NOT explain the detected disease unless the question asks about it.
+Use short bullet points and simple farmer‑friendly language.
 """
     else:
         prompt = f"""
 You are an expert agricultural advisor helping farmers in India.
-Always answer in clear English.
-Use short bullet points where useful.
 
 Crop: {crop}
 Detected Disease: {disease}
@@ -116,8 +78,15 @@ Soil Type: {soil}
 Soil Moisture: {moisture}%
 Weather: {weather}
 
-Explain the disease, give treatment steps, and prevention tips.
-Use short bullet points and practical farmer-friendly language.
+Explain the disease clearly.
+
+Provide:
+• What the disease is
+• Why it occurs
+• Treatment steps
+• Prevention tips
+
+Use simple bullet points suitable for farmers.
 """
 
     try:
@@ -232,7 +201,8 @@ def predict():
                 treatment = "Continue regular irrigation, monitor plant health, and maintain good soil nutrition."
                 ai_advice = None
             else:
-                # Do not call LLM here (to avoid blocking the page)
+                # Do not call the LLM here so the page loads faster.
+                # The frontend can request detailed AI advice using the /ai_advice API.
                 description = "Disease detected. Detailed AI advice will load shortly."
                 treatment = None
                 ai_advice = None

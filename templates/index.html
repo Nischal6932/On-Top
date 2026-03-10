@@ -479,8 +479,13 @@ select{
                 {% endif %}
 
                 <div class="info-card">
-                    <div class="info-card-title">🤖 AI Farming Advice</div>
-                    <div class="info-card-content" id="ai-advice">Generating AI advice...</div>
+                    <div class="info-card-title">🌾 AI Disease Guidance</div>
+                    <div class="info-card-content" id="ai-disease-advice">Generating AI disease advice...</div>
+                </div>
+
+                <div class="info-card">
+                    <div class="info-card-title">💬 AI Answer to Your Question</div>
+                    <div class="info-card-content" id="ai-question-answer">Waiting for your question...</div>
                 </div>
 
                 {% if treatment %}
@@ -610,17 +615,34 @@ async function loadAIAdvice(){
         });
 
         const data = await response.json();
-        const adviceBox = document.getElementById("ai-advice");
-        if(adviceBox){
-            adviceBox.innerHTML = "<strong>Question:</strong> " + question +
-                                  "<br><br><strong>AI Answer:</strong><br>" +
-                                  data.advice.replace(/\\n/g,"<br>");
+        const diseaseBox = document.getElementById("ai-disease-advice");
+        const questionBox = document.getElementById("ai-question-answer");
+        // Always show disease guidance
+        if(diseaseBox){
+            diseaseBox.innerHTML =
+                "<strong>Disease Advice:</strong><br>" +
+                data.advice.replace(/\\n/g,"<br>");
+        }
+
+        // If the user asked a question, show answer separately
+        if(question && question.trim() !== ""){
+            if(questionBox){
+                questionBox.innerHTML =
+                    "<strong>Question:</strong> " + question +
+                    "<br><br><strong>AI Answer:</strong><br>" +
+                    data.advice.replace(/\\n/g,"<br>");
+            }
         }
     }
     catch(e){
-        const adviceBox = document.getElementById("ai-advice");
-        if(adviceBox){
-            adviceBox.innerText = "AI advice service unavailable.";
+        const diseaseBox = document.getElementById("ai-disease-advice");
+        const questionBox = document.getElementById("ai-question-answer");
+
+        if(diseaseBox){
+            diseaseBox.innerText = "AI advice service unavailable.";
+        }
+        if(questionBox){
+            questionBox.innerText = "AI advice service unavailable.";
         }
     }
 }
