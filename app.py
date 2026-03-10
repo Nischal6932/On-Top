@@ -12,7 +12,15 @@ model = None
 def get_model():
     global model
     if model is None:
-        model = tf.keras.models.load_model("plant_disease_efficientnet.keras")
+        try:
+            model = tf.keras.models.load_model(
+                "plant_disease_efficientnet.keras",
+                compile=False,
+                safe_mode=False
+            )
+        except Exception as e:
+            print("Model loading failed:", e)
+            raise e
     return model
 
 # Disease classes
