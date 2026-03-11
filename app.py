@@ -187,7 +187,8 @@ def predict():
         img = np.array(img) / 255.0
         img = np.expand_dims(img, axis=0)
 
-        prediction = get_model().predict(img, verbose=0)
+        model = get_model()
+        prediction = model.predict(img, verbose=0)
 
         # --- Crop based class filtering ---
         if crop == "Pepper":
