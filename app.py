@@ -13,11 +13,7 @@ def get_model():
     global model
     if model is None:
         try:
-            model = tf.keras.models.load_model(
-                "plant_disease_efficientnet.keras",
-                compile=False,
-                safe_mode=False
-            )
+            model = tf.keras.models.load_model("plant_disease_model.h5", compile=False)
         except Exception as e:
             print("Model loading failed:", e)
             raise e
@@ -209,8 +205,8 @@ def predict():
         # Get Top-2 predictions among allowed classes
         top2_local = np.argsort(filtered_predictions)[-2:][::-1]
 
-        best_idx_local = top2_local[0]
-        second_idx_local = top2_local[1] if len(top2_local) > 1 else top2_local[0]
+        best_idx_local = int(top2_local[0])
+        second_idx_local = int(top2_local[1]) if len(top2_local) > 1 else int(top2_local[0])
 
         best_idx = allowed_classes[best_idx_local]
         second_idx = allowed_classes[second_idx_local]
