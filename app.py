@@ -201,7 +201,7 @@ def predict():
             allowed_classes = list(range(len(class_names)))
 
         # Filter predictions to only allowed crop classes
-        filtered_predictions = prediction[0][allowed_classes]
+        filtered_predictions = np.array(prediction[0])[allowed_classes]
 
         # Get Top-2 predictions among allowed classes
         top2_local = np.argsort(filtered_predictions)[-2:][::-1]
