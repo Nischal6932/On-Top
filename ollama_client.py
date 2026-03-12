@@ -2,17 +2,23 @@ import os
 import requests
 import json
 
-# Try different Ollama URLs for Render compatibility
-OLLAMA_URLS = [
-    "http://localhost:11434/api/generate",
-    "http://127.0.0.1:11434/api/generate",
-    "http://0.0.0.0:11434/api/generate"
-]
-
 def ask_llm(prompt, model="phi3", timeout=30):
     """
-    Safe LLM call with error handling and multiple URL fallbacks
+    Safe LLM call with error handling for production deployment
+    Returns fallback response if Ollama is not available
     """
+    # Check if we're in production (Render) and skip Ollama calls
+    if os.environ.get('ENVIRONMENT') == 'production' or os.environ.get('RENDER'):
+        # Return a fallback response for production
+        return "AI advice service is not available in this deployment. Please consult with a local agricultural expert for detailed advice."
+    
+    # Try different Ollama URLs for local development
+    OLLAMA_URLS = [
+        "http://localhost:11434/api/generate",
+        "http://127.0.0.1:11434/api/generate",
+        "http://0.0.0.0:11434/api/generate"
+    ]
+    
     for ollama_url in OLLAMA_URLS:
         try:
             response = requests.post(
@@ -51,4 +57,4 @@ def ask_llm(prompt, model="phi3", timeout=30):
             continue
     
     # Fallback response if all URLs fail
-    return "AI advice service temporarily unavailable. Please try again later."
+    return "AI advice service temporarily unavailable. Please try again later or consult with a local agricultural expert."

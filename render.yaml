@@ -5,11 +5,27 @@ services:
     runtime: python
     pythonVersion: 3.11.9
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-level debug
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 180 --log-level debug --keep-alive 2 --max-requests 100 --max-requests-jitter 10
     plan: free
+    healthCheckPath: /health
+    healthCheck:
+      path: /health
+      timeoutSeconds: 60
+      intervalSeconds: 90
+      gracePeriodSeconds: 30
     envVars:
       - key: FLASK_DEBUG
         value: false
       - key: PYTHONUNBUFFERED
         value: "1"
-    healthCheckPath: /health
+      - key: ENVIRONMENT
+        value: production
+      - key: TF_FORCE_GPU_ALLOW_GROWTH
+        value: "true"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "2"
+    disk:
+      name: smart-farming-disk
+      mountPath: /app
+      sizeGB: 1
+    autoDeploy: false
