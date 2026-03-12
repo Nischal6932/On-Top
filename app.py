@@ -215,6 +215,7 @@ def predict():
         try:
             model = get_model()
             if model is None:
+                print("ERROR: Model is None after get_model()")
                 return render_template(
                     "index.html",
                     result=None,
@@ -229,9 +230,15 @@ def predict():
                     chat_response=None
                 )
             
+            print(f"Making prediction on image shape: {img.shape}")
             prediction = model.predict(img, verbose=0)
+            print(f"Raw prediction shape: {prediction.shape}")
+            print(f"Raw prediction values: {prediction}")
+            
         except Exception as e:
             print(f"Prediction error: {e}")
+            import traceback
+            traceback.print_exc()
             return render_template(
                 "index.html",
                 result=None,
@@ -270,7 +277,10 @@ def predict():
             filtered_predictions = np.array(preds)
             allowed_classes = list(range(len(class_names)))
 
+        # Get sorted indices (highest to lowest)
         sorted_idx = np.argsort(filtered_predictions)[::-1]
+        
+        # Safety check
         if len(sorted_idx) == 0:
             return render_template(
                 "index.html",
@@ -286,13 +296,11 @@ def predict():
                 chat_response=None
             )
 
-        best_idx_local = int(sorted_idx[0])
+        # Get best and second best predictions
+        best_idx_local = sorted_idx[0]
+        second_idx_local = sorted_idx[1] if len(sorted_idx) > 1 else sorted_idx[0]
 
-        if len(sorted_idx) > 1:
-            second_idx_local = int(sorted_idx[1])
-        else:
-            second_idx_local = int(sorted_idx[0])
-
+        # Convert to original class indices
         best_idx = allowed_classes[best_idx_local]
         second_idx = allowed_classes[second_idx_local]
 
@@ -305,6 +313,8 @@ def predict():
         confidence = float(filtered_predictions[best_idx_local])
         second_confidence = float(filtered_predictions[second_idx_local])
 
+        print(f"Prediction result: {class_names[best_idx]} with confidence {confidence}")
+
         # Confidence threshold to avoid false disease alarms
         if confidence < 0.7:
             result = "Leaf appears healthy or disease is unclear"
@@ -313,13 +323,13 @@ def predict():
         else:
             result = class_names[best_idx]
 
-            # Skip LLM if the plant is healthy
+            # Skip LLM if plant is healthy
             if "healthy" in result.lower():
                 description = "The plant appears healthy with no visible disease symptoms."
                 treatment = "Continue regular irrigation, monitor plant health, and maintain good soil nutrition."
                 ai_advice = None
             else:
-                # Do not call the LLM here so the page loads faster.
+                # Do not call LLM here so page loads faster.
                 # The frontend can request detailed AI advice using the /ai_advice API.
                 description = "Disease detected. Detailed AI advice will load shortly."
                 treatment = None
