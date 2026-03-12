@@ -53,9 +53,13 @@ class_names = [
 
 
 
-@app.route("/health", methods=["GET"])
+@app.route('/health', methods=['GET'])
 def health():
-    return {"status": "ok"}, 200
+    return {"status": "ok", "message": "Smart Farming AI is running"}, 200
+
+@app.route('/test', methods=['GET'])
+def test():
+    return {"status": "ok", "message": "Test endpoint working", "model_loaded": model is not None}, 200
 
 @app.route("/ai_advice", methods=["POST"])
 def ai_advice_endpoint():
@@ -357,5 +361,18 @@ if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     
-    print(f"Starting app on port {port}, debug={debug_mode}")
+    print("=" * 50)
+    print("🌿 Smart Farming AI Starting...")
+    print(f"Port: {port}")
+    print(f"Debug: {debug_mode}")
+    print(f"Environment: {os.environ.get('ENVIRONMENT', 'development')}")
+    print("=" * 50)
+    
+    # Test model loading
+    try:
+        test_model = get_model()
+        print(f"✅ Model loaded: {test_model is not None}")
+    except Exception as e:
+        print(f"❌ Model loading failed: {e}")
+    
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
