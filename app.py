@@ -13,10 +13,23 @@ def get_model():
     global model
     if model is None:
         try:
-            model = tf.keras.models.load_model("plant_disease_efficientnet.keras", compile=False)
-        except Exception as e:
-            print("Model loading failed:", e)
+            import os
+            model_path = os.path.join(os.path.dirname(__file__), "plant_disease_efficientnet.keras")
+            print(f"Loading model from: {model_path}")
+            
+            # Check if model file exists
+            if not os.path.exists(model_path):
+                raise FileNotFoundError(f"Model file not found: {model_path}")
+            
+            model = tf.keras.models.load_model(model_path, compile=False)
+            print("Model loaded successfully")
+        except FileNotFoundError as e:
+            print(f"Model file error: {e}")
             raise e
+        except Exception as e:
+            print(f"Model loading failed: {e}")
+            # Don't raise exception, return None to allow fallback
+            model = None
     return model
 
 # Disease classes
@@ -116,12 +129,14 @@ def predict():
     if request.method == "POST":
 
         file = request.files.get('image')
-        if file is None or file.filename == "":
+
+        # Prevent crashes if request is triggered without form data (health checks etc.)
+        if request.method == "POST" and (file is None or file.filename == ""):
             return render_template(
                 "index.html",
                 result=None,
                 confidence=None,
-                description="No image uploaded. Please upload a leaf image.",
+                description="Please upload a plant leaf image.",
                 treatment=None,
                 soil_advice=None,
                 irrigation_advice=None,
@@ -130,7 +145,13 @@ def predict():
                 ai_advice=None,
                 chat_response=None
             )
+
         crop = request.form.get("crop")
+
+        # Safety fallback if crop not selected
+        if crop is None or crop.strip() == "":
+            crop = "Unknown"
+
         soil = request.form.get("soil")
         moisture = request.form.get("moisture")
         weather = request.form.get("weather")
@@ -148,8 +169,11 @@ def predict():
         else:
             soil_advice = f"{soil} soil can grow {crop}, but monitoring nutrients and drainage is recommended."
 
-        # Moisture based irrigation advice
-        moisture_val = int(moisture) if moisture and moisture.isdigit() else 40
+        # Safe moisture parsing
+        try:
+            moisture_val = int(moisture) if moisture is not None else 40
+        except Exception:
+            moisture_val = 40
 
         if moisture_val < 30:
             irrigation_advice = "Soil moisture is low. Increase irrigation frequency."
@@ -170,12 +194,13 @@ def predict():
 
         try:
             img = Image.open(file).convert("RGB").resize((224,224))
-        except Exception:
+        except Exception as e:
+            print(f"Image processing error: {e}")
             return render_template(
                 "index.html",
                 result=None,
                 confidence=None,
-                description="Invalid image file. Please upload a valid leaf image.",
+                description=f"Image processing failed: {str(e)}. Please upload a valid leaf image.",
                 treatment=None,
                 soil_advice=None,
                 irrigation_advice=None,
@@ -187,8 +212,39 @@ def predict():
         img = np.array(img) / 255.0
         img = np.expand_dims(img, axis=0)
 
-        model = get_model()
-        prediction = model.predict(img, verbose=0)
+        try:
+            model = get_model()
+            if model is None:
+                return render_template(
+                    "index.html",
+                    result=None,
+                    confidence=None,
+                    description="Model not available. Please check server configuration.",
+                    treatment=None,
+                    soil_advice=soil_advice,
+                    irrigation_advice=irrigation_advice,
+                    weather_analysis=weather_analysis,
+                    top2_predictions=None,
+                    ai_advice=None,
+                    chat_response=None
+                )
+            
+            prediction = model.predict(img, verbose=0)
+        except Exception as e:
+            print(f"Prediction error: {e}")
+            return render_template(
+                "index.html",
+                result=None,
+                confidence=None,
+                description=f"Model prediction failed: {str(e)}. Please try again.",
+                treatment=None,
+                soil_advice=soil_advice,
+                irrigation_advice=irrigation_advice,
+                weather_analysis=weather_analysis,
+                top2_predictions=None,
+                ai_advice=None,
+                chat_response=None
+            )
 
         # --- Crop based class filtering ---
         if crop == "Pepper":
@@ -214,11 +270,28 @@ def predict():
             filtered_predictions = np.array(preds)
             allowed_classes = list(range(len(class_names)))
 
-        # Get Top‑2 predictions among allowed classes safely
         sorted_idx = np.argsort(filtered_predictions)[::-1]
+        if len(sorted_idx) == 0:
+            return render_template(
+                "index.html",
+                result=None,
+                confidence=None,
+                description="Prediction could not be generated. Please upload a clearer image.",
+                treatment=None,
+                soil_advice=soil_advice,
+                irrigation_advice=irrigation_advice,
+                weather_analysis=weather_analysis,
+                top2_predictions=None,
+                ai_advice=None,
+                chat_response=None
+            )
 
         best_idx_local = int(sorted_idx[0])
-        second_idx_local = int(sorted_idx[1]) if len(sorted_idx) > 1 else int(sorted_idx[0])
+
+        if len(sorted_idx) > 1:
+            second_idx_local = int(sorted_idx[1])
+        else:
+            second_idx_local = int(sorted_idx[0])
 
         best_idx = allowed_classes[best_idx_local]
         second_idx = allowed_classes[second_idx_local]
@@ -270,4 +343,9 @@ def predict():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    print(f"Starting app on port {port}, debug={debug_mode}")
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
