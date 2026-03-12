@@ -13,7 +13,7 @@ def get_model():
     global model
     if model is None:
         try:
-            model = tf.keras.models.load_model("plant_disease_model.h5", compile=False)
+            model = tf.keras.models.load_model("plant_disease_efficientnet.keras", compile=False)
         except Exception as e:
             print("Model loading failed:", e)
             raise e
