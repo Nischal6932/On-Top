@@ -149,7 +149,7 @@ def predict():
             soil_advice = f"{soil} soil can grow {crop}, but monitoring nutrients and drainage is recommended."
 
         # Moisture based irrigation advice
-        moisture_val = int(moisture) if moisture else 40
+        moisture_val = int(moisture) if moisture and moisture.isdigit() else 40
 
         if moisture_val < 30:
             irrigation_advice = "Soil moisture is low. Increase irrigation frequency."
@@ -192,22 +192,33 @@ def predict():
 
         # --- Crop based class filtering ---
         if crop == "Pepper":
-            allowed_classes = [i for i,c in enumerate(class_names) if "Pepper" in c]
+            allowed_classes = [i for i, c in enumerate(class_names) if "Pepper" in c]
         elif crop == "Potato":
-            allowed_classes = [i for i,c in enumerate(class_names) if "Potato" in c]
+            allowed_classes = [i for i, c in enumerate(class_names) if "Potato" in c]
         elif crop == "Tomato":
-            allowed_classes = [i for i,c in enumerate(class_names) if "Tomato" in c]
+            allowed_classes = [i for i, c in enumerate(class_names) if "Tomato" in c]
         else:
+            # fallback to all classes if crop is unknown
+            allowed_classes = list(range(len(class_names)))
+
+        # Safety check to avoid empty filtering
+        if len(allowed_classes) == 0:
             allowed_classes = list(range(len(class_names)))
 
         # Filter predictions to only allowed crop classes
-        filtered_predictions = np.array(prediction[0])[allowed_classes]
+        preds = np.squeeze(prediction)
+        filtered_predictions = np.array(preds)[allowed_classes]
 
-        # Get Top-2 predictions among allowed classes
-        top2_local = np.argsort(filtered_predictions)[-2:][::-1]
+        # Prevent crash if something goes wrong with filtering
+        if len(filtered_predictions) == 0:
+            filtered_predictions = np.array(preds)
+            allowed_classes = list(range(len(class_names)))
 
-        best_idx_local = int(top2_local[0])
-        second_idx_local = int(top2_local[1]) if len(top2_local) > 1 else int(top2_local[0])
+        # Get Top‑2 predictions among allowed classes safely
+        sorted_idx = np.argsort(filtered_predictions)[::-1]
+
+        best_idx_local = int(sorted_idx[0])
+        second_idx_local = int(sorted_idx[1]) if len(sorted_idx) > 1 else int(sorted_idx[0])
 
         best_idx = allowed_classes[best_idx_local]
         second_idx = allowed_classes[second_idx_local]
