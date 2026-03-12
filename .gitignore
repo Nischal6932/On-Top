@@ -38,9 +38,9 @@ venv/
 # VS Code
 .vscode/
 
-# Model files (large)
-*.keras
-*.h5
+# Model files (large) - COMMENTED OUT FOR DEPLOYMENT
+# *.keras
+# *.h5
 
 # Test images
 test_*.png
