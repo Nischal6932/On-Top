@@ -14,20 +14,34 @@ def get_model():
     if model is None:
         try:
             import os
+            import psutil
             model_path = os.path.join(os.path.dirname(__file__), "plant_disease_efficientnet.keras")
-            print(f"Loading model from: {model_path}")
+            print(f"🤖 Loading model from: {model_path}")
+            
+            # Check memory before loading
+            memory_before = psutil.virtual_memory()
+            print(f"💾 Memory before model: {memory_before.percent}% used")
             
             # Check if model file exists
             if not os.path.exists(model_path):
                 raise FileNotFoundError(f"Model file not found: {model_path}")
             
+            # Get file size
+            file_size = os.path.getsize(model_path) / (1024 * 1024)  # MB
+            print(f"📊 Model file size: {file_size:.1f} MB")
+            
             model = tf.keras.models.load_model(model_path, compile=False)
-            print("Model loaded successfully")
+            
+            # Check memory after loading
+            memory_after = psutil.virtual_memory()
+            print(f"💾 Memory after model: {memory_after.percent}% used")
+            print("✅ Model loaded successfully")
+            
         except FileNotFoundError as e:
-            print(f"Model file error: {e}")
+            print(f"❌ Model file error: {e}")
             raise e
         except Exception as e:
-            print(f"Model loading failed: {e}")
+            print(f"❌ Model loading failed: {e}")
             # Don't raise exception, return None to allow fallback
             model = None
     return model
@@ -60,6 +74,63 @@ def health():
 @app.route('/test', methods=['GET'])
 def test():
     return {"status": "ok", "message": "Test endpoint working", "model_loaded": model is not None}, 200
+
+@app.route('/debug', methods=['GET'])
+def debug_info():
+    """Debug endpoint to check system status"""
+    import os
+    import sys
+    
+    debug_info = {
+        'python_version': sys.version,
+        'working_directory': os.getcwd(),
+        'files_in_dir': os.listdir('.'),
+        'model_files': [f for f in os.listdir('.') if f.endswith(('.keras', '.h5'))],
+        'model_file_exists': os.path.exists('plant_disease_efficientnet.keras'),
+        'model_file_size': None,
+        'memory_info': None,
+        'tensorflow_version': None,
+        'numpy_version': None,
+        'pillow_version': None
+    }
+    
+    try:
+        import tensorflow as tf
+        debug_info['tensorflow_version'] = tf.__version__
+    except:
+        debug_info['tensorflow_version'] = 'Not available'
+    
+    try:
+        import numpy as np
+        debug_info['numpy_version'] = np.__version__
+    except:
+        debug_info['numpy_version'] = 'Not available'
+    
+    try:
+        from PIL import Image
+        debug_info['pillow_version'] = Image.__version__
+    except:
+        debug_info['pillow_version'] = 'Not available'
+    
+    try:
+        import psutil
+        memory = psutil.virtual_memory()
+        debug_info['memory_info'] = {
+            'total_gb': round(memory.total / (1024**3), 2),
+            'available_gb': round(memory.available / (1024**3), 2),
+            'percent_used': memory.percent
+        }
+    except:
+        debug_info['memory_info'] = 'psutil not available'
+    
+    if debug_info['model_file_exists']:
+        try:
+            size = os.path.getsize('plant_disease_efficientnet.keras') / (1024 * 1024)
+            debug_info['model_file_size'] = f"{size:.1f} MB"
+        except:
+            debug_info['model_file_size'] = 'Could not determine size'
+    
+    return jsonify(debug_info)
 
 @app.route("/ai_advice", methods=["POST"])
 def ai_advice_endpoint():
@@ -118,7 +189,10 @@ Use simple bullet points suitable for farmers.
 
 @app.route('/', methods=['GET', 'POST'])
 def predict():
-
+    print(f"🔍 Request method: {request.method}")
+    print(f"📁 Request files: {list(request.files.keys())}")
+    print(f"📝 Request form: {dict(request.form)}")
+    
     result = None
     confidence = None
     description = None
@@ -131,11 +205,14 @@ def predict():
     chat_response = None
 
     if request.method == "POST":
-
+        print("🔄 Processing POST request...")
+        
         file = request.files.get('image')
+        print(f"📷 File received: {file}, filename: {file.filename if file else 'None'}")
 
         # Prevent crashes if request is triggered without form data (health checks etc.)
         if request.method == "POST" and (file is None or file.filename == ""):
+            print("❌ No file uploaded, returning error message")
             return render_template(
                 "index.html",
                 result=None,
@@ -197,9 +274,11 @@ def predict():
             weather_analysis = "Weather conditions appear stable for crop growth."
 
         try:
+            print("🖼️ Processing image...")
             img = Image.open(file).convert("RGB").resize((224,224))
+            print(f"✅ Image processed successfully, shape: {img.size}")
         except Exception as e:
-            print(f"Image processing error: {e}")
+            print(f"❌ Image processing error: {e}")
             return render_template(
                 "index.html",
                 result=None,
@@ -215,11 +294,13 @@ def predict():
             )
         img = np.array(img) / 255.0
         img = np.expand_dims(img, axis=0)
+        print(f"🔢 Image array shape: {img.shape}")
 
         try:
+            print("🧠 Loading model for prediction...")
             model = get_model()
             if model is None:
-                print("ERROR: Model is None after get_model()")
+                print("❌ Model is None after get_model()")
                 return render_template(
                     "index.html",
                     result=None,
@@ -234,13 +315,13 @@ def predict():
                     chat_response=None
                 )
             
-            print(f"Making prediction on image shape: {img.shape}")
+            print(f"🔮 Making prediction on image shape: {img.shape}")
             prediction = model.predict(img, verbose=0)
-            print(f"Raw prediction shape: {prediction.shape}")
-            print(f"Raw prediction values: {prediction}")
+            print(f"📊 Raw prediction shape: {prediction.shape}")
+            print(f"📈 Raw prediction values: {prediction}")
             
         except Exception as e:
-            print(f"Prediction error: {e}")
+            print(f"❌ Prediction error: {e}")
             import traceback
             traceback.print_exc()
             return render_template(
@@ -283,9 +364,11 @@ def predict():
 
         # Get sorted indices (highest to lowest)
         sorted_idx = np.argsort(filtered_predictions)[::-1]
+        print(f"📊 Sorted indices: {sorted_idx}")
         
         # Safety check
         if len(sorted_idx) == 0:
+            print("❌ No sorted indices available")
             return render_template(
                 "index.html",
                 result=None,
@@ -317,29 +400,39 @@ def predict():
         confidence = float(filtered_predictions[best_idx_local])
         second_confidence = float(filtered_predictions[second_idx_local])
 
-        print(f"Prediction result: {class_names[best_idx]} with confidence {confidence}")
+        print(f"🎯 Prediction result: {class_names[best_idx]} with confidence {confidence}")
+        print(f"📈 Confidence values: best={confidence}, second={second_confidence}")
 
         # Confidence threshold to avoid false disease alarms
         if confidence < 0.7:
             result = "Leaf appears healthy or disease is unclear"
             description = "The model confidence is low. The leaf likely appears healthy or symptoms are not clear."
             treatment = "Monitor the plant and upload a clearer image if symptoms develop."
+            print("🟢 Low confidence - marking as healthy/unclear")
         else:
             result = class_names[best_idx]
+            print(f"🔴 High confidence - disease detected: {result}")
 
             # Skip LLM if plant is healthy
             if "healthy" in result.lower():
                 description = "The plant appears healthy with no visible disease symptoms."
                 treatment = "Continue regular irrigation, monitor plant health, and maintain good soil nutrition."
                 ai_advice = None
+                print("🟢 Plant is healthy")
             else:
                 # Do not call LLM here so page loads faster.
                 # The frontend can request detailed AI advice using the /ai_advice API.
                 description = "Disease detected. Detailed AI advice will load shortly."
                 treatment = None
                 ai_advice = None
+                print("🔴 Disease detected - AI advice available")
 
         confidence = round(confidence * 100, 2)
+        print(f"📊 Final confidence: {confidence}%")
+        print("✅ Prediction processing complete")
+        
+    else:
+        print("📄 GET request - showing upload form")
 
     return render_template(
         "index.html",
