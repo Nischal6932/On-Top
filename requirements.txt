@@ -5,3 +5,4 @@ gunicorn==21.2.0
 requests==2.31.0
 gtts==2.4.0
 deep-translator==1.11.4
+tensorflow==2.13.0
