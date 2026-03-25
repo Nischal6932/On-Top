@@ -7,4 +7,3 @@ gtts==2.4.0
 deep-translator==1.11.4
 
 # Updated for Render deployment compatibility
-
