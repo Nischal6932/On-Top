@@ -5,3 +5,5 @@ Pillow==10.1.0
 gunicorn==21.2.0
 psutil==5.9.6
 requests==2.31.0
+gtts==2.4.0
+deep-translator==1.11.4
