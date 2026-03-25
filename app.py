@@ -3,8 +3,103 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 from ollama_client import ask_llm
+from gtts import gTTS
+import os
+from deep_translator import GoogleTranslator
+
 
 app = Flask(__name__)
+
+# Translations for multi-language support
+translations = {
+    "English": {
+        "title": "Smart Farming Assistant",
+        "upload": "Upload Leaf Image",
+        "crop": "Select Crop",
+        "soil": "Soil Type",
+        "moisture": "Soil Moisture Level",
+        "weather": "Current Weather",
+        "question": "Ask AI about your crop (optional)",
+        "button": "🔍 Analyze My Crop",
+        "disease_desc": "Disease Description",
+        "ai_guidance": "AI Disease Guidance",
+        "ai_answer": "AI Answer to Your Question",
+        "treatment": "Recommended Treatment",
+        "soil_card": "Soil Compatibility",
+        "irrigation": "Irrigation Advice",
+        "weather_card": "Weather Analysis",
+        "alternatives": "Alternative Possibilities"
+        ,"crop_tomato": "Tomato",
+        "crop_potato": "Potato",
+        "crop_pepper": "Pepper",
+        "soil_clay": "Clay",
+        "soil_loam": "Loam",
+        "soil_sandy": "Sandy",
+        "soil_silt": "Silt",
+        "weather_dry": "Dry",
+        "weather_humid": "Humid",
+        "weather_rainy": "Rainy",
+        "weather_hot": "Hot"
+    },
+    "Hindi": {
+        "title": "स्मार्ट खेती सहायक",
+        "upload": "पत्ती की तस्वीर अपलोड करें",
+        "crop": "फसल चुनें",
+        "soil": "मिट्टी का प्रकार",
+        "moisture": "मिट्टी की नमी",
+        "weather": "मौसम",
+        "question": "अपने फसल के बारे में पूछें",
+        "button": "🔍 विश्लेषण करें",
+        "disease_desc": "रोग विवरण",
+        "ai_guidance": "AI रोग मार्गदर्शन",
+        "ai_answer": "आपके प्रश्न का उत्तर",
+        "treatment": "उपचार सुझाव",
+        "soil_card": "मिट्टी अनुकूलता",
+        "irrigation": "सिंचाई सलाह",
+        "weather_card": "मौसम विश्लेषण",
+        "alternatives": "वैकल्पिक संभावनाएँ"
+        ,"crop_tomato": "टमाटर",
+        "crop_potato": "आलू",
+        "crop_pepper": "मिर्च",
+        "soil_clay": "चिकनी मिट्टी",
+        "soil_loam": "दोमट",
+        "soil_sandy": "रेतीली",
+        "soil_silt": "गाद",
+        "weather_dry": "सूखा",
+        "weather_humid": "नमी",
+        "weather_rainy": "बरसात",
+        "weather_hot": "गर्म"
+    },
+    "Telugu": {
+        "title": "స్మార్ట్ వ్యవసాయ సహాయకుడు",
+        "upload": "ఆకు చిత్రం అప్లోడ్ చేయండి",
+        "crop": "పంటను ఎంచుకోండి",
+        "soil": "మట్టి రకం",
+        "moisture": "మట్టి తేమ",
+        "weather": "వాతావరణం",
+        "question": "మీ పంట గురించి అడగండి",
+        "button": "🔍 విశ్లేషించండి",
+        "disease_desc": "రోగ వివరణ",
+        "ai_guidance": "AI వ్యాధి సూచనలు",
+        "ai_answer": "మీ ప్రశ్నకు సమాధానం",
+        "treatment": "చికిత్స సూచనలు",
+        "soil_card": "మట్టి అనుకూలత",
+        "irrigation": "పారుదల సూచనలు",
+        "weather_card": "వాతావరణ విశ్లేషణ",
+        "alternatives": "ప్రత్యామ్నాయ అవకాశాలు"
+        ,"crop_tomato": "టమోటా",
+        "crop_potato": "బంగాళాదుంప",
+        "crop_pepper": "మిర్చి",
+        "soil_clay": "మట్టి",
+        "soil_loam": "లోమ్",
+        "soil_sandy": "ఇసుక",
+        "soil_silt": "సిల్ట్",
+        "weather_dry": "ఎండ",
+        "weather_humid": "తేమ",
+        "weather_rainy": "వర్షం",
+        "weather_hot": "వేడి"
+    }
+}
 
 # Configure file upload settings
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -167,8 +262,12 @@ class_names = [
 @app.errorhandler(413)
 def too_large(e):
     """Handle file too large error"""
+    language = "English"
+    t = translations.get(language, translations["English"])
     return render_template(
         "index.html",
+        t=t,
+        language=language,
         result=None,
         confidence=None,
         description=f"File too large. Maximum size is {app.config['MAX_CONTENT_LENGTH'] // (1024*1024)}MB. Please upload a smaller image.",
@@ -257,11 +356,17 @@ def ai_advice_endpoint():
     moisture = data.get("moisture")
     weather = data.get("weather")
     question = data.get("question")
+    language = data.get("language", "English")
 
     # Build prompt depending on whether farmer asked a question
     if question and question.strip() != "":
         prompt = f"""
 You are an expert agricultural advisor helping farmers in India.
+
+Respond STRICTLY in {language} language.
+DO NOT use English at all.
+If needed, translate your full answer into {language}.
+Use simple, clear, farmer-friendly words in {language}.
 
 The farmer asked a specific question about their crop.
 
@@ -277,6 +382,11 @@ Use short bullet points and simple farmer‑friendly language.
     else:
         prompt = f"""
 You are an expert agricultural advisor helping farmers in India.
+
+Respond STRICTLY in {language} language.
+DO NOT use English at all.
+If needed, translate your full answer into {language}.
+Use simple, clear, farmer-friendly words in {language}.
 
 Crop: {crop}
 Detected Disease: {disease}
@@ -296,10 +406,60 @@ Use simple bullet points suitable for farmers.
 """
 
     try:
+        print(f"🌍 Selected language: {language}")
         response = ask_llm(prompt).strip()
-        return jsonify({"advice": response})
+
+        # Force translation using Google Translator (reliable)
+        try:
+            if language != "English":
+                lang_map = {
+                    "English": "en",
+                    "Hindi": "hi",
+                    "Telugu": "te",
+                    "Tamil": "ta",
+                    "Kannada": "kn"
+                }
+
+                target_lang = lang_map.get(language, "en")
+
+                translated_response = GoogleTranslator(source='auto', target=target_lang).translate(response)
+                if translated_response:
+                    response = translated_response
+
+        except Exception as e:
+            print(f"Translation failed: {e}")
+
+        # Generate voice output using gTTS
+        try:
+            lang_map = {
+                "English": "en",
+                "Hindi": "hi",
+                "Telugu": "te",
+                "Tamil": "ta",
+                "Kannada": "kn"
+            }
+
+            tts_lang = lang_map.get(language, "en")
+            audio_path = os.path.join("static", "output.mp3")
+
+            tts = gTTS(text=response, lang=tts_lang)
+            tts.save(audio_path)
+
+            audio_url = "/static/output.mp3"
+
+        except Exception as e:
+            print(f"Audio generation failed: {e}")
+            audio_url = None
+
+        return jsonify({
+            "advice": response,
+            "audio": audio_url
+        })
     except Exception:
-        return jsonify({"advice": "AI advice service unavailable"})
+        return jsonify({
+            "advice": "AI advice service unavailable",
+            "audio": None
+        })
 
 @app.route('/', methods=['GET', 'POST'])
 def predict():
@@ -317,6 +477,8 @@ def predict():
     top2_predictions = None
     ai_advice = None
     chat_response = None
+    language = request.form.get("language", "English") if request.method == "POST" else "English"
+    t = translations.get(language, translations["English"])
 
     if request.method == "POST":
         print("🔄 Processing POST request...")
@@ -329,6 +491,8 @@ def predict():
             print("❌ No file uploaded, returning error message")
             return render_template(
                 "index.html",
+                t=t,
+                language=language,
                 result=None,
                 confidence=None,
                 description="Please upload a plant leaf image.",
@@ -347,6 +511,8 @@ def predict():
             print(f"❌ File validation failed: {validation_message}")
             return render_template(
                 "index.html",
+                t=t,
+                language=language,
                 result=None,
                 confidence=None,
                 description=f"Invalid file: {validation_message}",
@@ -407,16 +573,9 @@ def predict():
 
         try:
             print("🖼️ Processing image...")
-            # Reset file pointer to beginning
             file.seek(0)
-            
-            # Open and process image with error handling
             img = Image.open(file.stream).convert("RGB").resize((224, 224))
             print(f"✅ Image processed successfully, shape: {img.size}")
-            
-            # Additional validation - ensure image is not corrupted
-            img.verify()  # Verify it's a valid image
-            img = Image.open(file.stream).convert("RGB").resize((224, 224))  # Reopen after verify
             
         except Exception as e:
             print(f"❌ Image processing error: {e}")
@@ -428,6 +587,8 @@ def predict():
             
             return render_template(
                 "index.html",
+                t=t,
+                language=language,
                 result=None,
                 confidence=None,
                 description=f"Image processing failed: {error_msg}",
@@ -447,123 +608,27 @@ def predict():
             print("🧠 Loading model for prediction...")
             model = get_model()
             if model is None:
-                print("❌ Model not available, using fallback prediction")
-                # Use fallback prediction
-                fallback_result, fallback_confidence = get_fallback_prediction(img[0])
-                
-                # Map fallback results to user-friendly messages
-                if fallback_result == "healthy":
-                    result = "Leaf appears healthy (basic analysis)"
-                    description = "Based on basic color analysis, the plant appears healthy. For accurate disease detection, please try again later or consult with an expert."
-                    treatment = "Continue regular monitoring and care practices."
-                elif fallback_result == "moderate_risk":
-                    result = "Possible plant stress detected"
-                    description = "Basic analysis suggests some plant stress. This could be due to environmental factors or early disease signs."
-                    treatment = "Monitor closely and ensure proper watering and nutrition."
-                else:
-                    result = "Potential issues detected"
-                    description = "Basic analysis indicates potential issues. Please consult with an agricultural expert for proper diagnosis."
-                    treatment = "Seek expert advice for proper diagnosis and treatment."
-                
-                confidence = round(fallback_confidence * 100, 2)
-                print(f"🔄 Fallback result: {result} with confidence {confidence}%")
-            else:
-                print(f"🔮 Making prediction on image shape: {img.shape}")
-                prediction = model.predict(img, verbose=0)
-                print(f"📊 Raw prediction shape: {prediction.shape}")
-                print(f"📈 Raw prediction values: {prediction}")
-                
-                # --- Crop based class filtering ---
-                if crop == "Pepper":
-                    allowed_classes = [i for i, c in enumerate(class_names) if "Pepper" in c]
-                elif crop == "Potato":
-                    allowed_classes = [i for i, c in enumerate(class_names) if "Potato" in c]
-                elif crop == "Tomato":
-                    allowed_classes = [i for i, c in enumerate(class_names) if "Tomato" in c]
-                else:
-                    # fallback to all classes if crop is unknown
-                    allowed_classes = list(range(len(class_names)))
-
-                # Safety check to avoid empty filtering
-                if len(allowed_classes) == 0:
-                    allowed_classes = list(range(len(class_names)))
-
-                # Filter predictions to only allowed crop classes
-                preds = np.squeeze(prediction)
-                filtered_predictions = np.array(preds)[allowed_classes]
-
-                # Prevent crash if something goes wrong with filtering
-                if len(filtered_predictions) == 0:
-                    filtered_predictions = np.array(preds)
-                    allowed_classes = list(range(len(class_names)))
-
-                # Get sorted indices (highest to lowest)
-                sorted_idx = np.argsort(filtered_predictions)[::-1]
-                print(f"📊 Sorted indices: {sorted_idx}")
-                
-                # Safety check
-                if len(sorted_idx) == 0:
-                    print("❌ No sorted indices available")
-                    return render_template(
-                        "index.html",
-                        result=None,
-                        confidence=None,
-                        description="Prediction could not be generated. Please upload a clearer image.",
-                        treatment=None,
-                        soil_advice=soil_advice,
-                        irrigation_advice=irrigation_advice,
-                        weather_analysis=weather_analysis,
-                        top2_predictions=None,
-                        ai_advice=None,
-                        chat_response=None
-                    )
-
-                # Get best and second best predictions
-                best_idx_local = sorted_idx[0]
-                second_idx_local = sorted_idx[1] if len(sorted_idx) > 1 else sorted_idx[0]
-
-                # Convert to original class indices
-                best_idx = allowed_classes[best_idx_local]
-                second_idx = allowed_classes[second_idx_local]
-
-                top2_predictions = [
-                    (class_names[best_idx], float(filtered_predictions[best_idx_local])),
-                    (class_names[second_idx], float(filtered_predictions[second_idx_local]))
-                ]
-
-                # Confidence based only on the filtered crop classes
-                confidence = float(filtered_predictions[best_idx_local])
-                second_confidence = float(filtered_predictions[second_idx_local])
-
-                print(f"🎯 Prediction result: {class_names[best_idx]} with confidence {confidence}")
-                print(f"📈 Confidence values: best={confidence}, second={second_confidence}")
-
-                # Confidence threshold to avoid false disease alarms
-                if confidence < 0.7:
-                    result = "Leaf appears healthy or disease is unclear"
-                    description = "The model confidence is low. The leaf likely appears healthy or symptoms are not clear."
-                    treatment = "Monitor the plant and upload a clearer image if symptoms develop."
-                    print("🟢 Low confidence - marking as healthy/unclear")
-                else:
-                    result = class_names[best_idx]
-                    print(f"🔴 High confidence - disease detected: {result}")
-
-                    # Skip LLM if plant is healthy
-                    if "healthy" in result.lower():
-                        description = "The plant appears healthy with no visible disease symptoms."
-                        treatment = "Continue regular irrigation, monitor plant health, and maintain good soil nutrition."
-                        ai_advice = None
-                        print("🟢 Plant is healthy")
-                    else:
-                        # Do not call LLM here so page loads faster.
-                        # The frontend can request detailed AI advice using the /ai_advice API.
-                        description = "Disease detected. Detailed AI advice will load shortly."
-                        treatment = None
-                        ai_advice = None
-                        print("🔴 Disease detected - AI advice available")
-
-                confidence = round(confidence * 100, 2)
-                print(f"📊 Final confidence: {confidence}%")
+                print("❌ Model is None after get_model()")
+                return render_template(
+                    "index.html",
+                    t=t,
+                    language=language,
+                    result=None,
+                    confidence=None,
+                    description="Model not available. Please check server configuration.",
+                    treatment=None,
+                    soil_advice=soil_advice,
+                    irrigation_advice=irrigation_advice,
+                    weather_analysis=weather_analysis,
+                    top2_predictions=None,
+                    ai_advice=None,
+                    chat_response=None
+                )
+            
+            print(f"🔮 Making prediction on image shape: {img.shape}")
+            prediction = model.predict(img, verbose=0)
+            print(f"📊 Raw prediction shape: {prediction.shape}")
+            print(f"📈 Raw prediction values: {prediction}")
             
         except Exception as e:
             print(f"❌ Prediction error: {e}")
@@ -571,9 +636,11 @@ def predict():
             traceback.print_exc()
             return render_template(
                 "index.html",
+                t=t,
+                language=language,
                 result=None,
                 confidence=None,
-                description=f"Prediction failed: {str(e)}. Using basic analysis instead.",
+                description=f"Model prediction failed: {str(e)}. Please try again.",
                 treatment=None,
                 soil_advice=soil_advice,
                 irrigation_advice=irrigation_advice,
@@ -582,12 +649,133 @@ def predict():
                 ai_advice=None,
                 chat_response=None
             )
+
+        # --- Crop based class filtering ---
+        if crop == "Pepper":
+            allowed_classes = [i for i, c in enumerate(class_names) if "Pepper" in c]
+        elif crop == "Potato":
+            allowed_classes = [i for i, c in enumerate(class_names) if "Potato" in c]
+        elif crop == "Tomato":
+            allowed_classes = [i for i, c in enumerate(class_names) if "Tomato" in c]
+        else:
+            # fallback to all classes if crop is unknown
+            allowed_classes = list(range(len(class_names)))
+
+        # Safety check to avoid empty filtering
+        if len(allowed_classes) == 0:
+            allowed_classes = list(range(len(class_names)))
+
+        # Filter predictions to only allowed crop classes
+        preds = np.squeeze(prediction)
+        filtered_predictions = np.array(preds)[allowed_classes]
+
+        # Prevent crash if something goes wrong with filtering
+        if len(filtered_predictions) == 0:
+            filtered_predictions = np.array(preds)
+            allowed_classes = list(range(len(class_names)))
+
+        # Get sorted indices (highest to lowest)
+        sorted_idx = np.argsort(filtered_predictions)[::-1]
+        print(f"📊 Sorted indices: {sorted_idx}")
+        
+        # Safety check
+        if len(sorted_idx) == 0:
+            print("❌ No sorted indices available")
+            return render_template(
+                "index.html",
+                t=t,
+                language=language,
+                result=None,
+                confidence=None,
+                description="Prediction could not be generated. Please upload a clearer image.",
+                treatment=None,
+                soil_advice=soil_advice,
+                irrigation_advice=irrigation_advice,
+                weather_analysis=weather_analysis,
+                top2_predictions=None,
+                ai_advice=None,
+                chat_response=None
+            )
+
+        # Get best and second best predictions
+        best_idx_local = sorted_idx[0]
+        second_idx_local = sorted_idx[1] if len(sorted_idx) > 1 else sorted_idx[0]
+
+        # Convert to original class indices
+        best_idx = allowed_classes[best_idx_local]
+        second_idx = allowed_classes[second_idx_local]
+
+        top2_predictions = [
+            (class_names[best_idx], float(filtered_predictions[best_idx_local])),
+            (class_names[second_idx], float(filtered_predictions[second_idx_local]))
+        ]
+
+        # Confidence based only on the filtered crop classes
+        confidence = float(filtered_predictions[best_idx_local])
+        second_confidence = float(filtered_predictions[second_idx_local])
+
+        print(f"🎯 Prediction result: {class_names[best_idx]} with confidence {confidence}")
+        print(f"📈 Confidence values: best={confidence}, second={second_confidence}")
+
+        # Confidence threshold to avoid false disease alarms
+        if confidence < 0.7:
+            result = "Leaf appears healthy or disease is unclear"
+            description = "The model confidence is low. The leaf likely appears healthy or symptoms are not clear."
+            treatment = "Monitor the plant and upload a clearer image if symptoms develop."
+            print("🟢 Low confidence - marking as healthy/unclear")
+        else:
+            result = class_names[best_idx]
+            print(f"🔴 High confidence - disease detected: {result}")
+
+            # Skip LLM if plant is healthy
+            if "healthy" in result.lower():
+                description = "The plant appears healthy with no visible disease symptoms."
+                treatment = "Continue regular irrigation, monitor plant health, and maintain good soil nutrition."
+                ai_advice = None
+                print("🟢 Plant is healthy")
+            else:
+                # Do not call LLM here so page loads faster.
+                # The frontend can request detailed AI advice using the /ai_advice API.
+                description = "Disease detected. Detailed AI advice will load shortly."
+                treatment = None
+                ai_advice = None
+                print("🔴 Disease detected - AI advice available")
+
+        confidence = round(confidence * 100, 2)
+        print(f"📊 Final confidence: {confidence}%")
+        print("✅ Prediction processing complete")
         
     else:
         print("📄 GET request - showing upload form")
 
+    # 🔥 FORCE TRANSLATION FOR ALL OUTPUTS
+    def translate_text(text):
+        try:
+            if language != "English" and text:
+                lang_map = {
+                    "English": "en",
+                    "Hindi": "hi",
+                    "Telugu": "te",
+                    "Tamil": "ta",
+                    "Kannada": "kn"
+                }
+                return GoogleTranslator(source='auto', target=lang_map.get(language, "en")).translate(text)
+        except Exception as e:
+            print(f"Translation error: {e}")
+        return text
+
+    # Apply translation to outputs
+    description = translate_text(description)
+    treatment = translate_text(treatment)
+    soil_advice = translate_text(soil_advice)
+    irrigation_advice = translate_text(irrigation_advice)
+    weather_analysis = translate_text(weather_analysis)
+    result = translate_text(result)
+
     return render_template(
         "index.html",
+        t=t,
+        language=language,
         result=result,
         confidence=confidence,
         description=description,
@@ -603,7 +791,7 @@ def predict():
 
 if __name__ == "__main__":
     import os
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     
     print("=" * 50)

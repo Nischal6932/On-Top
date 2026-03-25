@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Farming Assistant</title>
+    <title>{{ t.title }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <style>
@@ -134,9 +134,37 @@ select,input[type="text"]{
 
 /* Force readable dropdown appearance on Safari */
 select{
-    appearance:none;
-    -webkit-appearance:none;
-    background-color:#ffffff;
+    appearance:none !important;
+    -webkit-appearance:none !important;
+    -moz-appearance:none !important;
+    background-color:#ffffff !important;
+    color:#111827 !important;
+    border:1px solid #d1d5db !important;
+    border-radius:8px;
+    padding:10px;
+    box-shadow:none !important;
+    outline:none !important;
+}
+
+/* Fix Safari dark tint when interacting */
+select:focus,
+select:active{
+    background-color:#ffffff !important;
+    color:#111827 !important;
+    outline:none !important;
+    box-shadow:0 0 0 2px rgba(31,95,63,0.2) !important;
+}
+
+/* Dropdown options styling */
+select option{
+    background:#ffffff !important;
+    color:#111827 !important;
+}
+
+/* macOS Safari internal dropdown fix */
+select::-webkit-listbox{
+    background:#ffffff !important;
+    color:#111827 !important;
 }
 
 /* Improve label contrast even more */
@@ -357,18 +385,18 @@ select{
     </div>
 
     <div class="hero">
-        <h1>Smart Farming Assistant</h1>
+        <h1>{{ t.title }}</h1>
         <p>AI-powered plant disease detection & crop intelligence</p>
     </div>
 
     <div class="main-card">
-        <div class="section-title">📷 Upload & Settings</div>
-        <form method="POST" enctype="multipart/form-data">
+        <div class="section-title">📷 {{ t.upload }}</div>
+        <form method="POST" enctype="multipart/form-data" id="mainForm">
 
             <div class="form-grid">
                 <!-- File Upload -->
                 <div class="form-group full-width">
-                    <label>Upload Leaf Image</label>
+                    <label>{{ t.upload }}</label>
                     <div class="file-upload-wrapper">
                         <input type="file" name="image" id="fileInput" accept="image/*" required class="file-upload-input">
                         <div class="file-upload-box" id="uploadBox">
@@ -384,32 +412,32 @@ select{
 
                 <!-- Crop Selection -->
                 <div class="form-group">
-                    <label>Select Crop</label>
+                    <label>{{ t.crop }}</label>
                     <div class="select-wrapper">
                         <select name="crop" required>
-                            <option value="Tomato">Tomato</option>
-                            <option value="Potato">Potato</option>
-                            <option value="Pepper">Pepper</option>
+                            <option value="Tomato">{{ t.crop_tomato }}</option>
+                            <option value="Potato">{{ t.crop_potato }}</option>
+                            <option value="Pepper">{{ t.crop_pepper }}</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Soil Type -->
                 <div class="form-group">
-                    <label>Soil Type</label>
+                    <label>{{ t.soil }}</label>
                     <div class="select-wrapper">
                         <select name="soil" required>
-                            <option value="Clay">Clay</option>
-                            <option value="Loam">Loam</option>
-                            <option value="Sandy">Sandy</option>
-                            <option value="Silt">Silt</option>
+                            <option value="Clay">{{ t.soil_clay }}</option>
+                            <option value="Loam">{{ t.soil_loam }}</option>
+                            <option value="Sandy">{{ t.soil_sandy }}</option>
+                            <option value="Silt">{{ t.soil_silt }}</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Soil Moisture -->
                 <div class="form-group full-width">
-                    <label>Soil Moisture Level</label>
+                    <label>{{ t.moisture }}</label>
                     <div class="slider-container">
                         <input type="range" min="0" max="100" value="40" name="moisture" id="moistureSlider">
                         <span class="slider-value" id="moistureValue">40%</span>
@@ -418,25 +446,42 @@ select{
 
                 <!-- Weather -->
                 <div class="form-group full-width">
-                    <label>Current Weather</label>
+                    <label>{{ t.weather }}</label>
                     <div class="select-wrapper">
                         <select name="weather" required>
-                            <option value="Dry">Dry</option>
-                            <option value="Humid">Humid</option>
-                            <option value="Rainy">Rainy</option>
-                            <option value="Hot">Hot</option>
+                            <option value="Dry">{{ t.weather_dry }}</option>
+                            <option value="Humid">{{ t.weather_humid }}</option>
+                            <option value="Rainy">{{ t.weather_rainy }}</option>
+                            <option value="Hot">{{ t.weather_hot }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Language Selection -->
+                <div class="form-group full-width">
+                    <label>Language</label>
+                    <div class="select-wrapper">
+                        <select name="language" id="languageSelect">
+                            <option value="English">English</option>
+                            <option value="Hindi">Hindi</option>
+                            <option value="Telugu">Telugu</option>
+                            <option value="Tamil">Tamil</option>
+                            <option value="Kannada">Kannada</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             <div class="form-group full-width">
-                <label>Ask AI about your crop (optional)</label>
+                <label>{{ t.question }}</label>
                 <input type="text" name="question" value="{{ request.form.get('question','') }}" placeholder="Example: Why did this disease occur?" style="width:100%;padding:10px;border-radius:6px;border:1px solid #ccc;">
+                <button type="button" id="voiceBtn" style="margin-top:10px;padding:8px 12px;border:none;border-radius:6px;background:#1f5f3f;color:white;cursor:pointer;">
+                    🎤 Speak
+                </button>
             </div>
 
             <button type="submit" class="analyze-btn">
-                🔍 Analyze My Crop
+                {{ t.button }}
             </button>
 
         </form>
@@ -473,45 +518,45 @@ select{
             <div class="info-grid">
                 {% if description %}
                 <div class="info-card">
-                    <div class="info-card-title">📋 Disease Description</div>
+                    <div class="info-card-title">📋 {{ t.disease_desc }}</div>
                     <div class="info-card-content">{{ description }}</div>
                 </div>
                 {% endif %}
 
                 <div class="info-card">
-                    <div class="info-card-title">🌾 AI Disease Guidance</div>
+                    <div class="info-card-title">🌾 {{ t.ai_guidance }}</div>
                     <div class="info-card-content" id="ai-disease-advice">Generating AI disease advice...</div>
                 </div>
 
                 <div class="info-card">
-                    <div class="info-card-title">💬 AI Answer to Your Question</div>
+                    <div class="info-card-title">💬 {{ t.ai_answer }}</div>
                     <div class="info-card-content" id="ai-question-answer">Waiting for your question...</div>
                 </div>
 
                 {% if treatment %}
                 <div class="info-card">
-                    <div class="info-card-title">💊 Recommended Treatment</div>
+                    <div class="info-card-title">💊 {{ t.treatment }}</div>
                     <div class="info-card-content">{{ treatment }}</div>
                 </div>
                 {% endif %}
 
                 {% if soil_advice %}
                 <div class="info-card">
-                    <div class="info-card-title">🌱 Soil Compatibility</div>
+                    <div class="info-card-title">🌱 {{ t.soil_card }}</div>
                     <div class="info-card-content">{{ soil_advice }}</div>
                 </div>
                 {% endif %}
 
                 {% if irrigation_advice %}
                 <div class="info-card">
-                    <div class="info-card-title">💧 Irrigation Advice</div>
+                    <div class="info-card-title">💧 {{ t.irrigation }}</div>
                     <div class="info-card-content">{{ irrigation_advice }}</div>
                 </div>
                 {% endif %}
 
                 {% if weather_analysis %}
                 <div class="info-card">
-                    <div class="info-card-title">🌤️ Weather Analysis</div>
+                    <div class="info-card-title">🌤️ {{ t.weather_card }}</div>
                     <div class="info-card-content">{{ weather_analysis }}</div>
                 </div>
                 {% endif %}
@@ -519,7 +564,7 @@ select{
 
             {% if top2_predictions %}
             <div class="alt-predictions">
-                <div class="alt-predictions-title">Alternative Possibilities</div>
+                <div class="alt-predictions-title">{{ t.alternatives }}</div>
                 <div class="alt-list">
                     {% for disease, prob in top2_predictions %}
                     <div class="alt-item">
@@ -546,110 +591,178 @@ select{
 
 
 <script>
-// File upload preview
-document.getElementById("fileInput").onchange = function(evt) {
-    const [file] = evt.target.files;
-    if (file) {
-        document.getElementById("preview").src = URL.createObjectURL(file);
-        document.getElementById("previewContainer").classList.add("show");
-        document.getElementById("uploadBox").style.display = "none";
-    }
-};
-
-// Moisture slider
-document.getElementById("moistureSlider").oninput = function() {
-    document.getElementById("moistureValue").textContent = this.value + "%";
-};
-
-// Drag and drop
-const dropZone = document.getElementById("uploadBox");
-dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.style.borderColor = '#22c55e';
-    dropZone.style.background = 'rgba(34, 197, 94, 0.15)';
-});
-
-dropZone.addEventListener('dragleave', () => {
-    dropZone.style.borderColor = 'rgba(34, 197, 94, 0.3)';
-    dropZone.style.background = 'rgba(34, 197, 94, 0.05)';
-});
-
-dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        document.getElementById("fileInput").files = dt.files;
-        document.getElementById("preview").src = URL.createObjectURL(file);
-        document.getElementById("previewContainer").classList.add("show");
-        document.getElementById("uploadBox").style.display = "none";
-    }
-});
-
-// Load AI advice asynchronously so the UI doesn't block
-async function loadAIAdvice(){
-
-    const result = "{{ result if result else '' }}";
-    if(!result) return;
-
-    const crop = document.querySelector("select[name='crop']").value;
-    const soil = document.querySelector("select[name='soil']").value;
-    const moisture = document.getElementById("moistureSlider").value;
-    const weather = document.querySelector("select[name='weather']").value;
-    const questionInput = document.querySelector("input[name='question']");
-    const question = questionInput ? questionInput.value : "";
-
-    try{
-        const response = await fetch("/ai_advice",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-                crop:crop,
-                disease:result,
-                soil:soil,
-                moisture:moisture,
-                weather:weather,
-                question:question
-            })
-        });
-
-        const data = await response.json();
-        const diseaseBox = document.getElementById("ai-disease-advice");
-        const questionBox = document.getElementById("ai-question-answer");
-        // Always show disease guidance
-        if(diseaseBox){
-            diseaseBox.innerHTML =
-                "<strong>Disease Advice:</strong><br>" +
-                data.advice.replace(/\\n/g,"<br>");
+    // File upload preview
+    document.getElementById("fileInput").onchange = function(evt) {
+        const [file] = evt.target.files;
+        if (file) {
+            document.getElementById("preview").src = URL.createObjectURL(file);
+            document.getElementById("previewContainer").classList.add("show");
+            document.getElementById("uploadBox").style.display = "none";
         }
+    };
+    
+    // Moisture slider
+    document.getElementById("moistureSlider").oninput = function() {
+        document.getElementById("moistureValue").textContent = this.value + "%";
+    };
+    
+    // Drag and drop
+    const dropZone = document.getElementById("uploadBox");
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#22c55e';
+        dropZone.style.background = 'rgba(34, 197, 94, 0.15)';
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+        dropZone.style.background = 'rgba(34, 197, 94, 0.05)';
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            document.getElementById("fileInput").files = dt.files;
+            document.getElementById("preview").src = URL.createObjectURL(file);
+            document.getElementById("previewContainer").classList.add("show");
+            document.getElementById("uploadBox").style.display = "none";
+        }
+    });
+    
+    // Load AI advice asynchronously
+    async function loadAIAdvice(){
+    
+        const result = {{ result|tojson }};
+        if(!result) return;
+    
+        const crop = document.querySelector("select[name='crop']").value;
+        const soil = document.querySelector("select[name='soil']").value;
+        const moisture = document.getElementById("moistureSlider").value;
+        const weather = document.querySelector("select[name='weather']").value;
+        const language = document.querySelector("select[name='language']").value;
+        const questionInput = document.querySelector("input[name='question']");
+        const question = questionInput ? questionInput.value : "";
+    
+        try{
+            const response = await fetch("/ai_advice",{
+                method:"POST",
+                headers:{"Content-Type":"application/json"},
+                body:JSON.stringify({
+                    crop:crop,
+                    disease:result,
+                    soil:soil,
+                    moisture:moisture,
+                    weather:weather,
+                    question:question,
+                    language:language
+                })
+            });
+            if(!response.ok){
+                throw new Error("API failed");
+            }
+            const data = await response.json();
+            // 🔊 Play AI voice response if available
+            if(data.audio){
+                try{
+                    const audio = new Audio(data.audio);
+                    audio.play();
+                } catch(e){
+                    console.log("Audio playback failed:", e);
+                }
+            }
+            const diseaseBox = document.getElementById("ai-disease-advice");
+            const questionBox = document.getElementById("ai-question-answer");
 
-        // If the user asked a question, show answer separately
-        if(question && question.trim() !== ""){
+            // Disease advice
+            if(diseaseBox){
+                diseaseBox.innerHTML =
+                    "<strong>Disease Advice:</strong><br>" +
+                    (data.advice || "No advice available").replace(/\\n/g,"<br>") +
+                    (data.audio ? "<br><br><audio controls src='" + data.audio + "'></audio>" : "");
+            }
+
+            // Question handling
+            if(question && question.trim() !== ""){
+                if(questionBox){
+                    questionBox.innerHTML =
+                        "<strong>Question:</strong> " + question +
+                        "<br><br><strong>AI Answer:</strong><br>" +
+                        (data.advice || "No advice available").replace(/\\n/g,"<br>") +
+                        (data.audio ? "<br><br><audio controls src='" + data.audio + "'></audio>" : "");
+                }
+            } else {
+                if(questionBox){
+                    questionBox.innerText = "No question asked.";
+                }
+            }
+        }
+        catch(e){
+            const diseaseBox = document.getElementById("ai-disease-advice");
+            const questionBox = document.getElementById("ai-question-answer");
+    
+            if(diseaseBox){
+                diseaseBox.innerText = "AI advice service unavailable.";
+            }
             if(questionBox){
-                questionBox.innerHTML =
-                    "<strong>Question:</strong> " + question +
-                    "<br><br><strong>AI Answer:</strong><br>" +
-                    data.advice.replace(/\\n/g,"<br>");
+                questionBox.innerText = "AI advice service unavailable.";
             }
         }
     }
-    catch(e){
-        const diseaseBox = document.getElementById("ai-disease-advice");
-        const questionBox = document.getElementById("ai-question-answer");
+    
+    // 🎤 Voice Input (Speech-to-Text)
+    const voiceBtn = document.getElementById("voiceBtn");
 
-        if(diseaseBox){
-            diseaseBox.innerText = "AI advice service unavailable.";
-        }
-        if(questionBox){
-            questionBox.innerText = "AI advice service unavailable.";
-        }
+    if ('webkitSpeechRecognition' in window) {
+        const recognition = new webkitSpeechRecognition();
+        recognition.continuous = false;
+        // recognition.lang = 'en-US';
+
+        const langMap = {
+            English: 'en-US',
+            Hindi: 'hi-IN',
+            Telugu: 'te-IN',
+            Tamil: 'ta-IN',
+            Kannada: 'kn-IN'
+        };
+
+        const langDropdown = document.querySelector("select[name='language']");
+        langDropdown.addEventListener("change", function(){
+            recognition.lang = langMap[this.value] || 'en-US';
+        });
+
+        recognition.interimResults = false;
+        recognition.continuous = false;
+
+        voiceBtn.addEventListener("click", () => {
+            const selectedLang = document.querySelector("select[name='language']").value;
+            recognition.lang = langMap[selectedLang] || 'en-US';
+            recognition.start();
+            voiceBtn.innerText = "🎤 Listening...";
+        });
+
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            const input = document.querySelector("input[name='question']");
+            input.value = transcript;
+            voiceBtn.innerText = "🎤 Speak";
+        };
+
+        recognition.onerror = function(event) {
+            console.error("Speech error:", event.error);
+            voiceBtn.innerText = "🎤 Speak";
+        };
+    } else {
+        voiceBtn.style.display = "none";
     }
-}
 
-// Call AI advice loader after page render
-loadAIAdvice();
-</script>
+    // Only load AI advice (no UI override anymore)
+    window.onload = function(){
+        loadAIAdvice();
+    };
+    </script>
 
 </body>
 </html>
